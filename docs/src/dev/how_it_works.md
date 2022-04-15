@@ -18,7 +18,7 @@ end
 The `Partials` type is used to implement the `Dual` type:
 
 ```julia
-struct Dual{T,V<:Real,N} <: Real
+struct Dual{T,V<:Number,N} <: Real
     value::V
     partials::Partials{N,V}
 end

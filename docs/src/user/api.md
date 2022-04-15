@@ -4,14 +4,14 @@
 CurrentModule = ForwardDiff
 ```
 
-## Derivatives of `f(x::Real)::Union{Real,AbstractArray}`
+## Derivatives of `f(x::Number)::Union{Real,AbstractArray}`
 
 ```@docs
 ForwardDiff.derivative
 ForwardDiff.derivative!
 ```
 
-## Gradients of `f(x::AbstractArray)::Real`
+## Gradients of `f(x::AbstractArray)::Number`
 
 ```@docs
 ForwardDiff.gradient
@@ -25,7 +25,7 @@ ForwardDiff.jacobian
 ForwardDiff.jacobian!
 ```
 
-## Hessians of `f(x::AbstractArray)::Real`
+## Hessians of `f(x::AbstractArray)::Number`
 
 ```@docs
 ForwardDiff.hessian

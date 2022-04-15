@@ -6,9 +6,9 @@
     ForwardDiff.can_dual(V::Type)
 
 Determines whether the type V is allowed as the scalar type in a
-Dual. By default, only `<:Real` types are allowed.
+Dual. By default, only `<:Number` types are allowed.
 """
-can_dual(::Type{<:Real}) = true
+can_dual(::Type{<:Number}) = true
 can_dual(::Type) = false
 
 struct Dual{T,V,N} <: Real
@@ -272,16 +272,16 @@ end
 
 Base.rtoldefault(::Type{D}) where {D<:Dual} = Base.rtoldefault(valtype(D))
 
-Base.floor(::Type{R}, d::Dual) where {R<:Real} = floor(R, value(d))
+Base.floor(::Type{R}, d::Dual) where {R<:Number} = floor(R, value(d))
 Base.floor(d::Dual) = floor(value(d))
 
-Base.ceil(::Type{R}, d::Dual) where {R<:Real} = ceil(R, value(d))
+Base.ceil(::Type{R}, d::Dual) where {R<:Number} = ceil(R, value(d))
 Base.ceil(d::Dual) = ceil(value(d))
 
-Base.trunc(::Type{R}, d::Dual) where {R<:Real} = trunc(R, value(d))
+Base.trunc(::Type{R}, d::Dual) where {R<:Number} = trunc(R, value(d))
 Base.trunc(d::Dual) = trunc(value(d))
 
-Base.round(::Type{R}, d::Dual) where {R<:Real} = round(R, value(d))
+Base.round(::Type{R}, d::Dual) where {R<:Number} = round(R, value(d))
 Base.round(d::Dual) = round(value(d))
 
 if VERSION ≥ v"1.4"
@@ -552,14 +552,14 @@ end
     end
 end
 
-@inline function calc_fma_xy(x::Dual{T}, y::Dual{T}, z::Real) where T
+@inline function calc_fma_xy(x::Dual{T}, y::Dual{T}, z::Number) where T
     vx, vy = value(x), value(y)
     result = fma(vx, vy, z)
     return Dual{T}(result, _mul_partials(partials(x), partials(y), vy, vx))
 end
 
 @generated function calc_fma_xz(x::Dual{T,<:Any,N},
-                                y::Real,
+                                y::Number,
                                 z::Dual{T,<:Any,N}) where {T,N}
     ex = Expr(:tuple, [:(fma(partials(x)[$i], y,  partials(z)[$i])) for i in 1:N]...)
     return quote
@@ -594,14 +594,14 @@ end
     end
 end
 
-@inline function calc_muladd_xy(x::Dual{T}, y::Dual{T}, z::Real) where T
+@inline function calc_muladd_xy(x::Dual{T}, y::Dual{T}, z::Number) where T
     vx, vy = value(x), value(y)
     result = muladd(vx, vy, z)
     return Dual{T}(result, _mul_partials(partials(x), partials(y), vy, vx))
 end
 
 @generated function calc_muladd_xz(x::Dual{T,<:Any,N},
-                                   y::Real,
+                                   y::Number,
                                    z::Dual{T,<:Any,N}) where {T,N}
     ex = Expr(:tuple, [:(muladd(partials(x)[$i], y,  partials(z)[$i])) for i in 1:N]...)
     return quote
@@ -652,19 +652,19 @@ end
 # Symmetric eigvals #
 #-------------------#
 
-function LinearAlgebra.eigvals(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
+function LinearAlgebra.eigvals(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Number,N}
     λ,Q = eigen(Symmetric(value.(parent(A))))
     parts = ntuple(j -> diag(Q' * getindex.(partials.(A), j) * Q), N)
     Dual{Tg}.(λ, tuple.(parts...))
 end
 
-function LinearAlgebra.eigvals(A::Hermitian{<:Complex{<:Dual{Tg,T,N}}}) where {Tg,T<:Real,N}
+function LinearAlgebra.eigvals(A::Hermitian{<:Complex{<:Dual{Tg,T,N}}}) where {Tg,T<:Number,N}
     λ,Q = eigen(Hermitian(value.(real.(parent(A))) .+ im .* value.(imag.(parent(A)))))
     parts = ntuple(j -> diag(real.(Q' * (getindex.(partials.(real.(A)) .+ im .* partials.(imag.(A)), j)) * Q)), N)
     Dual{Tg}.(λ, tuple.(parts...))
 end
 
-function LinearAlgebra.eigvals(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
+function LinearAlgebra.eigvals(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Number,N}
     λ,Q = eigen(SymTridiagonal(value.(parent(A).dv),value.(parent(A).ev)))
     parts = ntuple(j -> diag(Q' * getindex.(partials.(A), j) * Q), N)
     Dual{Tg}.(λ, tuple.(parts...))
@@ -680,14 +680,14 @@ function _lyap_div!(A, λ)
     A
 end
 
-function LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
+function LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Number,N}
     λ = eigvals(A)
     _,Q = eigen(SymTridiagonal(value.(parent(A).dv),value.(parent(A).ev)))
     parts = ntuple(j -> Q*_lyap_div!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
 
-function LinearAlgebra.eigen(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
+function LinearAlgebra.eigen(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Number,N}
     λ = eigvals(A)
     _,Q = eigen(SymTridiagonal(value.(parent(A))))
     parts = ntuple(j -> Q*_lyap_div!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
